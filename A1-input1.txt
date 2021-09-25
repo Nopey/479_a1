@@ -1,0 +1,13 @@
+// The format of the input for each example is:
+// The number of full tubes
+// The number of empty tube(s)
+// For each full tube:
+// Tube 1: Ball-colours from bottom to top
+// Tube ...
+
+// Example input 1:
+2
+1
+YBYB
+BYBY
+
