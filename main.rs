@@ -1,4 +1,4 @@
-mod game; // links another source file, "game.rs". Namespaced to game:: 
+mod game; // includes another source file, "game.rs". Namespaced to game:: 
 mod astar;
 mod h10s;
 
@@ -26,6 +26,17 @@ fn main() {
     let game = game::Game::from_input(&mut BufReader::new(&mut ifile));
     print!("{}", &game);
 
+
+    // Compress game to allow more efficient heuristics implementation
+    let mut compressed_game = game.clone();
+    compress_game(&mut compressed_game);
+    // run search
+    let (path, stats) = astar::solve(Rc::new(compressed_game), |s| h10s::compressed_dig_clutter(s.borrow())).expect("Couldn't solve ball game");
+    // let (path, stats) = astar::solve(Rc::new(compressed_game), |s| h10s::compressed_diggly(s.borrow())).expect("Couldn't solve ball game");
+
+
+/*
+    // Heuristics: (that don't require compress_game)
     // let heuristic = h10s::ignoramus;
     // let heuristic = h10s::consecutive_enjoyer;
     // let heuristic = h10s::count_clutter;
@@ -33,29 +44,35 @@ fn main() {
     let heuristic = h10s::dig_clutter;
     // let heuristic = h10s::relaxed_bucket_solve;
 
-
-    // Compress game to allow more efficient heuristics implementation
-    let mut compressed_game = game.clone();
-    compress_game(&mut compressed_game);
-    let (path, stats) = astar::solve(Rc::new(compressed_game), |s| h10s::compressed_dig_clutter(s.borrow())).expect("Couldn't solve ball game");
-
-
-    // let path = astar::solve(compressed_game, heuristic).expect("Couldn't solve ball game");
+    // Non reference counting solve (consumes more memory, is probably slower)
     // let (path, stats) = astar::solve(game.clone(), heuristic).expect("Couldn't solve ball game");
-    // let (path, stats) = astar::solve(Rc::new(game.clone()), |s| heuristic(s.borrow())).expect("Couldn't solve ball game");
+
+    let (path, stats) = astar::solve(Rc::new(game.clone()), |s| heuristic(s.borrow())).expect("Couldn't solve ball game");
+*/
+
     println!("{}", stats);
-    // println!("{:#?}", path);
+    for edge in &path {
+        println!("{:?}", edge);
+    }
     println!();
 
+    // Replay the path onto the starting position;
+    // both to check that the path is a real solution,
+    // and display the board state at each step.
     let mut state = game;
     for action in path {
         state = state.try_action(action).expect("Couldn't replay action from path");
-        // println!("{}", state.is_solved());
         // println!("{}", heuristic(&state));
-        // println!("## {:?}:\n{}", action, state);
+
+        // NOISY - Print out board after every move
+        println!("## {:?}:\n{}", action, state);
     }
+    if !state.is_solved() { panic!("Solution did not solve game!"); }
 }
 
+/// Replaces the printable colors with serialized ones, starting at 0x01.
+///
+/// The resulting game is not displayable, but someheuristics can use a more efficient vector implementation instead of hashset.
 fn compress_game(game: &mut Game) {
     let mut idx = 0u8;
     let mut hm = HashMap::new();

@@ -70,6 +70,11 @@ pub fn diggly(game: &Game) -> Score {
         }).sum()
 }
 
+/// Same heuristic as diggly, but is implemented without a hashset for greater performance.
+///
+/// # Panics
+///
+/// Panics if balls' colors are not compressed. (See: main.rs compress_game)
 pub fn compressed_diggly(game: &Game) -> Score {
     // if there are N tubes, there are at most N-1 colors
     let mut seen = vec![false; game.tubes.len()];
@@ -118,6 +123,7 @@ pub fn dig_clutter(game: &Game) -> Score {
 ///
 /// Panics if balls' colors are not compressed. (See: main.rs compress_game)
 pub fn compressed_dig_clutter(game: &Game) -> Score {
+    // NOTE: this `seen` vector's 0 position goes unused. could be avoided, but reduces readability of below code.
     let mut seen = vec![false; game.tubes.len()];
     game.tubes.iter().map(|tube| {
             // penalize balls not having a continous streak of one color connecting to the bottom
@@ -137,24 +143,6 @@ pub fn compressed_dig_clutter(game: &Game) -> Score {
 }
 
 
-/*
-/// A relaxed version of the ball sorting game, in which.. I'll think of something
-/// 
-#[derive(Debug)]
-struct RelaxedGame {
-    game: Game,
-}
-
-impl State for RelaxedGame {
-    type Edge = Action;
-    type Iter = 
-    fn is_solved(&self) -> bool {
-        // use the unmodified game's rules for 
-        game.is_solved()
-    }
-}
-*/
-
 /// Solves a relaxed version of the game in which there are more buckets, using the diggly heuristic
 ///
 /// Admissable: A* with an admissable cost heuristic will give a path no longer than the real solution.
@@ -162,7 +150,7 @@ impl State for RelaxedGame {
 // 2: Solved for 10 long path in 224 work steps. work queue len: 2697
 // 3: Solved for 15 long path in 282 work steps. work queue len: 6857
 // 4: too slow
-// (Appears to be equivalent to diggly, and that makes sense..)
+// (Appears to be roughly equivalent to diggly)
 pub fn relaxed_bucket_solve(game: &Game) -> Score {
     let mut relaxed_game = game.clone();
     relaxed_game.tubes.push(Tube::empty());
