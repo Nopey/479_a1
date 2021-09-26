@@ -23,9 +23,9 @@ fn main() {
     print!("{}", &game);
 
     // let heuristic = h10s::ignoramus;
-    // let heuristic = h10s::consecutive_enjoyer;
+    let heuristic = h10s::consecutive_enjoyer;
     // let heuristic = h10s::count_clutter;
-    let heuristic = h10s::relaxed_bucket_solve;
+    // let heuristic = h10s::relaxed_bucket_solve;
 
 /*
     // Compress game to make heuristics more efficient

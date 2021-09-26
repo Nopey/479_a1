@@ -8,14 +8,14 @@ use std::collections::HashMap;
 use crate::astar::{Score,State};
 
 /// A game state, consisting of a number of Tubes.
-#[derive(Clone)] // Automatically generate code implementing `Clone`, a common trait (interface) for a type to implement.
+#[derive(Clone, Hash, Eq, PartialEq)] // Automatically generate code implementing `Clone`, a common trait (interface) for a type to implement.
 pub struct Game {
     /// Three to thirteen tubes, according to assignment one's description.
     pub tubes: Vec<Tube>, // a dynamically sized vector of Tubes
 }
 
 /// A tube, containing up to four balls.
-#[derive(Clone)]
+#[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Tube {
     /// NOTE: Balls fall towards the 0th index of this array by gravity, although this interface doesn't enforce this property.
     pub balls: [Option<Ball>; 4], // an array of four Option<Ball>s. Each Option

@@ -1,13 +1,14 @@
 //! Solve ball game with A* search
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Ordering;
 use std::fmt;
+use std::hash::Hash;
 
 /// An interface to expose a game's successor function to the search alg.
 ///
 /// Implemented by struct Game in game.rs
 // TODO: Remove Debug markers from astar code
-pub trait State: Sized + fmt::Debug {
+pub trait State: Sized + Hash + Eq + Clone {
     /// The search algorithm will return the path as a vector of Edges.
     type Edge: fmt::Debug + Clone + Clone;
     /// An iterator over the neighboring states, their cost, and the 'Edge' to return if this is used as the solution Path.
@@ -36,10 +37,10 @@ struct Node<S: State> {
     score: Score,
     /// Path cost to this path finding node
     cost: Score,
-    /// Path to this path finding node
-    path: Vec<S::Edge>,
     /// this node's game state
     state: S,
+    /// Previous edge and game state
+    prev: Option<(S,S::Edge)>,
 }
 
 /// Statistics about how difficult the problem was to solve
@@ -58,40 +59,52 @@ impl fmt::Display for SolveStats {
 /// A generic implementation of A*, which takes an initial state and heuristic.
 ///
 pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Option<(Vec<S::Edge>, SolveStats)> {
-    // TODO: A hashmap from state->previous state + edge would be better than constructing a million vecs :P
+    // "Reverse Edges". A hashmap from state to previous state + edge
+    let mut redges = HashMap::new();
 
     // a priority queue, implemented using the standard library's binary heap.
     let mut work_queue = BinaryHeap::<Node<S>>::new();
     work_queue.push(Node{
         score: 0,
         cost: 0,
-        path: Vec::new(),
         state: initial_state,
+        prev: None,
     });
     let mut work_count = 0;
     while let Some(work) = work_queue.pop() {
         // Break the fields of the "work" node out into variables old_state, old_cost, and old_path.
         // These are from the node we're coming from
         match work {
-            Node { state: old_state, cost: old_cost, path: old_path, score: _ } => {
+            Node { state: old_state, cost: old_cost, score: _, prev } => {
+                // If we're the first to reach "old_state" (which is the current work item)
+                // then the old_state's previous edge is the fastest route there
+                // so we save the old_state's previous edge and previous game state
+                if let Some(prev) = prev {
+                    redges.entry(old_state.clone()).or_insert(prev);
+                }
                 if old_state.is_solved() {
+                    let mut path = vec![];
+                    let mut state = old_state;
+                    while let Some((prev_state, prev_edge)) = redges.remove(&state) {
+                        path.push(prev_edge);
+                        state = prev_state;
+                    }
+                    // Reverse the path from destination to initial_state to be forwards
+                    path.reverse();
                     let stats = SolveStats{
-                        path_len: old_path.len(),
+                        path_len: path.len(),
                         work_count,
                         work_queue_len: work_queue.len()
                     };
-                    return Some((old_path, stats));
+                    return Some((path, stats));
                 }
-                for (state, cost, edge) in old_state.iter_successors() {
-                    let mut path = Vec::with_capacity(old_path.len());
-                    path.extend(old_path.iter().cloned());
-                    path.push(edge);
+                for (state, cost, edge) in old_state.clone().iter_successors() {
                     let cost = cost + old_cost;
                     let node = Node{
                         score: heuristic(&state) + cost,
                         cost,
-                        path,
-                        state
+                        state,
+                        prev: Some((old_state.clone(), edge))
                     };
                     work_queue.push(node);
                 }
@@ -127,9 +140,11 @@ impl<S: State> PartialEq for Node<S> {
 
 impl<S: State> Eq for Node<S> {}
 
+/*
 impl<S: State> fmt::Debug for Node<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.state.fmt(f)
     }
 }
+*/
 
