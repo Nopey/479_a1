@@ -5,7 +5,10 @@ use std::num::NonZeroU8;
 use std::io::BufRead;
 use std::fmt;
 use std::collections::HashMap;
+use std::borrow::Borrow;
+use std::hash::Hash;
 use crate::astar::{Score,State};
+use std::rc::Rc;
 
 /// A game state, consisting of a number of Tubes.
 #[derive(Clone, Hash, Eq, PartialEq)] // Automatically generate code implementing `Clone`, a common trait (interface) for a type to implement.
@@ -184,7 +187,29 @@ impl State for Game {
     type Edge = Action;
     type Iter = GameSuccessors;
     fn iter_successors(self) -> GameSuccessors {
-        GameSuccessors{
+        GameSuccessors {
+            state: self,
+            action: Action{
+                from: 0,
+                to: 0
+            }
+        }
+    }
+    /// If a game `is_solved` and `is_valid`, then it is solved. Some invalid board states are considered solved by this function,
+    /// but checking for validity is a tad costly.
+    ///
+    /// All successors to valid board states, as provided by iter_successors or try_action, will be valid board states.
+    fn is_solved(&self) -> bool {
+        // Apply the Tube::is_solved method to all our tubes, and return true iff all are solved.
+        return self.borrow().tubes.iter().all(Tube::is_solved);
+    }
+}
+
+impl State for Rc<Game> {
+    type Edge = Action;
+    type Iter = RcGameSuccessors;
+    fn iter_successors(self) -> RcGameSuccessors {
+        RcGameSuccessors {
             state: self,
             action: Action{
                 from: 0,
@@ -227,6 +252,42 @@ impl Iterator for GameSuccessors {
                     self.action.to += 1;
 
                     return Some((new_state, cost, action))
+                }
+                self.action.to += 1;
+            }
+
+            self.action.to = 0;
+            self.action.from += 1;
+        }
+        None
+    }
+}
+
+/// An iterator over the successive states to a ball game state.
+pub struct RcGameSuccessors {
+    state: Rc<Game>,
+    action: Action
+}
+
+impl Iterator for RcGameSuccessors {
+    type Item = (Rc<Game>, Score, Action);
+    fn next(&mut self) -> Option<Self::Item> {
+        let len = self.state.tubes.len() as u8;
+
+        // outer loop iterates self.action.from over 0..self.state.tubes.len()
+        // inner loop iterates self.action.to over 0..self.state.tubes.len()
+        while self.action.from < len {
+            while self.action.to < len {
+                // If we've stumbled into a valid move
+                if let Some(new_state) = self.state.try_action(self.action) {
+                    // cost of all moves in ball game is 1.
+                    let cost = 1;
+                    // copy action before modifying self.action
+                    let action = self.action;
+                    // increment so we don't keep yielding the same result
+                    self.action.to += 1;
+
+                    return Some((Rc::new(new_state), cost, action))
                 }
                 self.action.to += 1;
             }

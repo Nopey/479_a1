@@ -23,13 +23,6 @@ pub trait State: Sized + Hash + Eq + Clone {
 //TODO: Rename Score to `Cost`
 pub type Score = i32;
 
-/// An interface to a static heuristic function.
-///
-/// This interface is implemented by types in the h10s.rs file.
-pub trait Heuristic<S: State> {
-    fn score(state: &S) -> Score;
-}
-
 /// A simple wrapper around a State and a heuristic's score, that implements the Ord (Ordering) trait,
 /// which allows the states to be sorted by their score in a binary heap.
 struct Node<S: State> {
@@ -67,7 +60,7 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
     work_queue.push(Node{
         score: 0,
         cost: 0,
-        state: initial_state,
+        state: initial_state.clone(),
         prev: None,
     });
     let mut work_count = 0;
@@ -85,7 +78,8 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
                 if old_state.is_solved() {
                     let mut path = vec![];
                     let mut state = old_state;
-                    while let Some((prev_state, prev_edge)) = redges.remove(&state) {
+                    while state != initial_state {
+                        let (prev_state, prev_edge) = redges.remove(&state).unwrap();
                         path.push(prev_edge);
                         state = prev_state;
                     }
@@ -147,4 +141,3 @@ impl<S: State> fmt::Debug for Node<S> {
     }
 }
 */
-

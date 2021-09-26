@@ -6,7 +6,11 @@ use std::fs::File;
 use std::io::BufReader;
 use std::num::NonZeroU8;
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::borrow::Borrow;
+
 use game::Game;
+use astar::State;
 
 /// Entrypoint. Handles commandline arguments
 fn main() {
@@ -34,14 +38,16 @@ fn main() {
 
     let path = astar::solve(compressed_game, heuristic).expect("Couldn't solve ball game");
 */
-    let (path, stats) = astar::solve(game.clone(), heuristic).expect("Couldn't solve ball game");
+    // let (path, stats) = astar::solve(game.clone(), heuristic).expect("Couldn't solve ball game");
+    let (path, stats) = astar::solve(Rc::new(game.clone()), |s| heuristic(s.borrow())).expect("Couldn't solve ball game");
     println!("{}", stats);
     // println!("{:?}", path);
 
     let mut state = game;
     for action in path {
         state = state.try_action(action).expect("Couldn't replay action from path");
-        // print!("## {:?}:\n{}", action, state);
+        //println!("{}", state.is_solved());
+        //println!("## {:?}:\n{}", action, state);
     }
 }
 
