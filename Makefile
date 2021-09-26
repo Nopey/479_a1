@@ -13,9 +13,9 @@ balls:
 -include balls.d
 
 # debug build
-balls_d:
+balls_dbg:
 	$(RUSTC) --crate-name $@ -C debuginfo=2
--include balls_d.d
+-include balls_dbg.d
 
 # Generate Documentation
 # (Try opening doc/balls/index.html in a browser)
@@ -23,7 +23,17 @@ balls_d:
 doc:
 	rustdoc $(COMMON_FLAGS) --crate-name balls --document-private-items
 
+# build release and debug binary
+all: balls balls_dbg
+
+# professor-proofing the makefile by adding aliases
+.PHONY: docs build build_dbg
+docs: doc
+build: balls
+build_dbg: balls_dbg
+
+
 # Clean build dir
 .PHONY: clean
 clean:
-	rm -rf balls balls.d balls_d balls_d.d doc balls*.o
+	rm -rf balls balls.d balls_dbg balls_dbg.d doc balls*.o

@@ -1,4 +1,4 @@
-//! A somewhat generic implementation of the A* search algorithm.
+//! A* Search Algorithm implementation
 //!
 //! Contains no domain-specific knowledge about the ball-game.
 use std::collections::{BinaryHeap, HashSet};
@@ -26,11 +26,10 @@ pub trait State: Sized + Hash + Eq + Clone {
 //TODO: Rename Score to `Cost`
 pub type Score = i32;
 
-/// A simple wrapper around a State and a heuristic's score, that implements the Ord (Ordering) trait,
-/// which allows the states to be sorted by their score in a binary heap.
+/// A path to be considered, sorted by associated costs.
 struct Node<S: State> {
-    /// Heuristic's score
-    score: Score,
+    /// cost + heuristic's predicted future cost
+    astar_cost: Score,
     /// Path cost to this path finding node
     cost: Score,
     /// edges leading to this state from the initial_state
@@ -59,16 +58,18 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
     let mut work_queue = BinaryHeap::<Node<S>>::new();
     // Push our starting node
     work_queue.push(Node{
-        score: 0,
+        astar_cost: 0,
         cost: 0,
         path: vec![]
     });
 
     // Loop over the work queue. Nodes with the least cost will be considered first.
     while let Some(work) = work_queue.pop() {
-        // Break the fields of the "work" node out into variables cost and path while ignoring field 'score'
+        // Break the fields of the "work" node out into variables cost and path while ignoring field 'astar_cost'
         // These are from the node we're coming from
-        let Node { cost, score: _, path } = work;
+        let Node { cost, astar_cost: _, path } = work;
+
+        // Follow the edges from the initial state to the state described by `work`.
         let state = {
             let mut state = initial_state.clone();
             for edge in &path {
@@ -76,6 +77,7 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
             }
             state
         };
+
         if state.is_solved() {
             let stats = SolveStats{
                 path_len: path.len(),
@@ -84,6 +86,7 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
             };
             return Some((path, stats));
         }
+
         // If we're the first to reach state
         // then the state's previous edge is the fastest route there
         if visited.get(&state).is_none() {
@@ -92,13 +95,14 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
             // already visited node, skip any further work
             continue;
         }
+
         for (next_state, edge_cost, edge) in state.clone().iter_successors() {
             let cost = cost + edge_cost;
             let mut new_path = Vec::with_capacity(path.len());
             new_path.extend(path.iter().cloned());
             new_path.push(edge.clone());
             let node = Node{
-                score: heuristic(&next_state) + cost,
+                astar_cost: heuristic(&next_state) + cost,
                 cost,
                 path: new_path
             };
@@ -113,7 +117,7 @@ impl<S: State> Ord for Node<S> {
     fn cmp(&self, other: &Self) -> Ordering {
         // NOTE: In std's BinaryHeap the largest Node will be popped first, so this
         // code makes it so Node A > Node B if Node A's cost < Node B's cost
-        other.score.cmp(&self.score)
+        other.astar_cost.cmp(&self.astar_cost)
     }
 }
 
@@ -125,7 +129,7 @@ impl<S: State> PartialOrd for Node<S> {
 
 impl<S: State> PartialEq for Node<S> {
     fn eq(&self, other: &Self) -> bool {
-        self.score == other.score
+        self.astar_cost == other.astar_cost
     }
 }
 

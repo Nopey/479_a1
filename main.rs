@@ -1,23 +1,22 @@
+//! ball game and agent
+//!
+//! Magnus Larsen 2021
+
 mod game; // includes another source file, "game.rs". Namespaced to game:: 
 mod astar;
 mod h10s;
 
 use std::fs::File;
 use std::io::BufReader;
-use std::num::NonZeroU8;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::borrow::Borrow;
 
-use game::Game;
 use astar::State;
 
-/// Entrypoint. Handles commandline arguments
+/// Handles commandline intreface and program lifecycle
 fn main() {
     // Parse commandline arg
     let filename = std::env::args().skip(1).next().unwrap_or_else(||{
         // or print help
-        eprintln!("Expected one argument: input filename");
+        eprintln!("balls: Expected one argument: input filename");
         std::process::exit(1)
     });
 
@@ -29,10 +28,10 @@ fn main() {
 
     // Compress game to allow more efficient heuristics implementation
     let mut compressed_game = game.clone();
-    compress_game(&mut compressed_game);
+    compressed_game.compress();
     // run search
-    let (path, stats) = astar::solve(Rc::new(compressed_game), |s| h10s::compressed_dig_clutter(s.borrow())).expect("Couldn't solve ball game");
-    // let (path, stats) = astar::solve(Rc::new(compressed_game), |s| h10s::compressed_diggly(s.borrow())).expect("Couldn't solve ball game");
+    let (path, stats) = astar::solve(compressed_game, h10s::compressed_dig_clutter).expect("Couldn't solve ball game");
+    // let (path, stats) = astar::solve(compressed_game, h10s::compressed_diggly).expect("Couldn't solve ball game");
 
 
 /*
@@ -44,12 +43,11 @@ fn main() {
     let heuristic = h10s::dig_clutter;
     // let heuristic = h10s::relaxed_bucket_solve;
 
-    // Non reference counting solve (consumes more memory, is probably slower)
-    // let (path, stats) = astar::solve(game.clone(), heuristic).expect("Couldn't solve ball game");
-
-    let (path, stats) = astar::solve(Rc::new(game.clone()), |s| heuristic(s.borrow())).expect("Couldn't solve ball game");
+    // run search
+    let (path, stats) = astar::solve(game.clone(), heuristic).expect("Couldn't solve ball game");
 */
 
+    // Display stats and list path's edges
     println!("{}", stats);
     for edge in &path {
         println!("{:?}", edge);
@@ -62,35 +60,12 @@ fn main() {
     let mut state = game;
     for action in path {
         state = state.try_action(action).expect("Couldn't replay action from path");
+
+        // it was once useful to see the value of heuristics every step of the way
         // println!("{}", heuristic(&state));
 
         // NOISY - Print out board after every move
         println!("## {:?}:\n{}", action, state);
     }
     if !state.is_solved() { panic!("Solution did not solve game!"); }
-}
-
-/// Replaces the printable colors with serialized ones, starting at 0x01.
-///
-/// The resulting game is not displayable, but someheuristics can use a more efficient vector implementation instead of hashset.
-fn compress_game(game: &mut Game) {
-    let mut idx = 0u8;
-    let mut hm = HashMap::new();
-    for tube in &game.tubes {
-        for ball in &tube.balls {
-            if let Some(ball) = ball {
-                hm.entry(ball.color).or_insert_with(|| {
-                    idx += 1;
-                    NonZeroU8::new(idx).unwrap()
-                });
-            }
-        }
-    }
-    for tube in &mut game.tubes {
-        for ball in &mut tube.balls {
-            if let Some(ball) = ball {
-                ball.color = hm[&ball.color];
-            }
-        }
-    }
 }

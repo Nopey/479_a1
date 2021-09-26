@@ -4,7 +4,7 @@ use crate::game::*;
 use crate::astar::*;
 use std::collections::HashSet;
 
-/// Knows nothing, gives a 0 score to all states
+/// Knows nothing, gives a 0 cost to all states
 ///
 /// Devolves A* pathfinding into breadth first search
 // 1: Solved for 10 long path in 352546 work steps. work queue len: 1232156
@@ -28,8 +28,8 @@ pub fn consecutive_enjoyer(game: &Game) -> Score {
         }).sum()
 }
 
-/// This cost heuristic is the number of balls that are not
-/// connected to the bottom of the bucket by a run of one color.
+/// Count the number of balls not connected to the bottom
+/// of their tube by a run of one color.
 ///
 /// Admissable: All solutions will move the non-matching balls out of the bucket
 // 1: Solved for 10 long path in 296 work steps. work queue len: 1090
@@ -51,7 +51,7 @@ pub fn count_clutter(game: &Game) -> Score {
     cost
 }
 
-/// Similar to consecutive_enjoyer, but also dislikes repeated root balls of the same color
+/// Similar to consecutive_enjoyer, but also penalizes multiple root balls of the same color
 ///
 /// Admissable: all of those root balls of the same color need to be moved into one bucket eventually
 // 1: Solved for 10 long path in 148 work steps. work queue len: 323

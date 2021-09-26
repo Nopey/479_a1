@@ -1,14 +1,12 @@
-//! Ball game data structures, text input parser, transition function, win condition, display, etc.
+//! Ball game data structures, text input parser, successor function, win condition, display, etc.
 
 // This is like a C++ using statement. it brings the following struct into scope.
 use std::num::NonZeroU8;
 use std::io::BufRead;
 use std::fmt;
 use std::collections::HashMap;
-use std::borrow::Borrow;
 use std::hash::Hash;
 use crate::astar::{Score,State};
-use std::rc::Rc;
 
 /// A game state, consisting of a number of Tubes.
 #[derive(Clone, Hash, Eq, PartialEq)] // Automatically generate code implementing `Clone`, a common trait (interface) for a type to implement.
@@ -37,6 +35,26 @@ pub struct Ball {
 pub struct Action {
     from: u8,
     to: u8,
+}
+
+/// 
+#[derive(Debug)]
+pub enum ValidationError {
+    /// 3 to 13 tubes must be present.
+    NotEnoughTubes,
+    /// 3 to 13 tubes must be present.
+    TooManyTubes,
+    /// No ball can have an empty spot below it
+    SpaceBalls,
+    /// Exactly 4 balls of each color group must be present
+    NotEnoughBallsOfColor,
+    /// Exactly 4 balls of each color group must be present
+    TooManyBallsOfColor,
+    /// 4, 8, or 12 empty spots must be present
+    NotEnoughEmpties,
+    /// 4, 8, or 12 empty spots must be present
+    TooManyEmpties,
+    // Game::from_input's parsing errors are treated as irrecoverable and fatal
 }
 
 impl Game {
@@ -117,8 +135,8 @@ impl Game {
         let game = Game { // Construct a new Game object,
             tubes // with tubes variable as tubes member
         };
-        if !game.is_valid() {
-            panic!("Invalid game board. Do you have four balls of each color, 2-10 colors, and 1-3 empty tubes?");
+        if let Err(e) = game.validate() {
+            panic!("Invalid game board: {:?}", e);
         }
         game // returns game object, as there's no semicolon
     }
@@ -143,22 +161,22 @@ impl Game {
         new_state.tubes[to].balls[to_idx] = new_state.tubes[from].balls[from_idx];
         new_state.tubes[from].balls[from_idx] = None;
 
-        debug_assert!(!self.is_valid() || new_state.is_valid(), "try_action moved to an invalid state from valid state");
+        debug_assert!(self.validate().is_err() || new_state.validate().is_ok(), "try_action moved to an invalid state from valid state");
 
         Some(new_state)
     }
 
     /// Check if the game state follows the rules outlined in the assignment description.
-    /// This operation is a tad costly, as it allocates a hashmap. It can be written without one, but I wrote it as simply as possible.
-    pub fn is_valid(&self) -> bool {
-        // TODO: If I were to return enum values like TooManyBallsOfColor or NotEnoughEmpties, the user error could be more specific.
-
+    /// This operation is a tad costly, even using a hashmap; It can be written without one, but I wrote it as simply as possible.
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        use ValidationError::*;
         // A1 specifies valid games state with 2-10 full tubes and 1-3 empty, for a total of 3-13 tubes.
-        if self.tubes.len() < 3  { return false; }
-        if self.tubes.len() > 13 { return false; }
+        if self.tubes.len() < 3  { return Err(NotEnoughTubes); }
+        if self.tubes.len() > 13 { return Err(TooManyTubes); }
 
         // ensure there are no floating balls
-        if !self.tubes.iter().all(Tube::is_valid) { return false; }
+        // (balls preceded by an empty space)
+        if !self.tubes.iter().all(Tube::is_valid) { return Err(SpaceBalls); }
 
         let mut count = HashMap::new();
         for tube in &self.tubes {
@@ -170,16 +188,45 @@ impl Game {
         for (ball, &count) in &count {
             if let Some(_ball) = ball {
                 // The count of some ball
-                if count != 4 { return false; }
+                if count < 4 { return Err(NotEnoughBallsOfColor); }
+                if count > 4 { return Err(TooManyBallsOfColor); }
             } else {
                 // the "air" space count
-                if count < 4 { return false; }
-                if count > 12 { return false; }
+                if count < 4 { return Err(NotEnoughEmpties); }
+                if count > 12 { return Err(TooManyEmpties); }
             }
         }
 
-        // All conditions met, ball is valid!
-        true
+        // All conditions met, game is valid!
+        Ok(())
+    }
+
+    /// Replaces the printable colors with serialized ones, starting at 0x01.
+    ///
+    /// Afterwards, the game is not displayable, but several heuristics can use a more efficient vector implementation instead of hashset.
+    pub fn compress(&mut self) {
+        let mut idx = 0u8;
+        // mapping from printable ASCII to new color id
+        let mut hm = HashMap::new();
+        // fill mapping
+        for tube in &self.tubes {
+            for ball in &tube.balls {
+                if let Some(ball) = ball {
+                    hm.entry(ball.color).or_insert_with(|| {
+                        idx += 1;
+                        NonZeroU8::new(idx).unwrap()
+                    });
+                }
+            }
+        }
+        // replace all colors according to `hm`
+        for tube in &mut self.tubes {
+            for ball in &mut tube.balls {
+                if let Some(ball) = ball {
+                    ball.color = hm[&ball.color];
+                }
+            }
+        }
     }
 }
 
@@ -197,31 +244,6 @@ impl State for Game {
     }
     fn try_edge(&self, edge: &Action) -> Option<Self> {
         self.try_action(*edge)
-    }
-    /// If a game `is_solved` and `is_valid`, then it is solved. Some invalid board states are considered solved by this function,
-    /// but checking for validity is a tad costly.
-    ///
-    /// All successors to valid board states, as provided by iter_successors or try_action, will be valid board states.
-    fn is_solved(&self) -> bool {
-        // Apply the Tube::is_solved method to all our tubes, and return true iff all are solved.
-        return self.borrow().tubes.iter().all(Tube::is_solved);
-    }
-}
-
-impl State for Rc<Game> {
-    type Edge = Action;
-    type Iter = RcGameSuccessors;
-    fn iter_successors(self) -> RcGameSuccessors {
-        RcGameSuccessors {
-            state: self,
-            action: Action{
-                from: 0,
-                to: 0
-            }
-        }
-    }
-    fn try_edge(&self, edge: &Action) -> Option<Self> {
-        self.try_action(*edge).map(Rc::new)
     }
     /// If a game `is_solved` and `is_valid`, then it is solved. Some invalid board states are considered solved by this function,
     /// but checking for validity is a tad costly.
@@ -269,42 +291,6 @@ impl Iterator for GameSuccessors {
     }
 }
 
-/// An iterator over the successive states to a ball game state.
-pub struct RcGameSuccessors {
-    state: Rc<Game>,
-    action: Action
-}
-
-impl Iterator for RcGameSuccessors {
-    type Item = (Rc<Game>, Score, Action);
-    fn next(&mut self) -> Option<Self::Item> {
-        let len = self.state.tubes.len() as u8;
-
-        // outer loop iterates self.action.from over 0..self.state.tubes.len()
-        // inner loop iterates self.action.to over 0..self.state.tubes.len()
-        while self.action.from < len {
-            while self.action.to < len {
-                // If we've stumbled into a valid move
-                if let Some(new_state) = self.state.try_action(self.action) {
-                    // cost of all moves in ball game is 1.
-                    let cost = 1;
-                    // copy action before modifying self.action
-                    let action = self.action;
-                    // increment so we don't keep yielding the same result
-                    self.action.to += 1;
-
-                    return Some((Rc::new(new_state), cost, action))
-                }
-                self.action.to += 1;
-            }
-
-            self.action.to = 0;
-            self.action.from += 1;
-        }
-        None
-    }
-}
-
 impl Tube {
     pub fn empty() -> Tube {
         Tube{ balls: [None; 4] }
@@ -341,7 +327,7 @@ impl fmt::Display for Game {
             "Game with {} tubes, in {} state",
             self.tubes.len(),
             // If/else is an expression, not a statement.
-            if !self.is_valid() { "an invalid" }
+            if self.validate().is_err() { "an invalid" }
             else if !self.is_solved() { "a valid" }
             else { "a solved" }
         )?; // ? is the error short-circuiting operator. It will return from this function if write fails
