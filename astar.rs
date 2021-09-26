@@ -1,5 +1,5 @@
 //! Solve ball game with A* search
-use std::collections::{BinaryHeap, HashMap, hash_map};
+use std::collections::{BinaryHeap, HashMap, hash_map, HashSet};
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::Hash;
@@ -15,6 +15,8 @@ pub trait State: Sized + Hash + Eq + Clone {
     type Iter: Iterator<Item = (Self, Score, Self::Edge)>;
     /// Return an iterator over the neighboring states 
     fn iter_successors(self) -> Self::Iter;
+    /// Take an edge, if that edge exists.
+    fn try_edge(&self, edge: &Self::Edge) -> Option<Self>;
 
     fn is_solved(&self) -> bool;
 }
@@ -30,10 +32,8 @@ struct Node<S: State> {
     score: Score,
     /// Path cost to this path finding node
     cost: Score,
-    /// this node's game state
-    state: S,
-    /// Previous edge and game state
-    prev: Option<(S,S::Edge)>,
+    /// edges leading to this state from the initial_state
+    path: Vec<S::Edge>,
 }
 
 /// Statistics about how difficult the problem was to solve
@@ -52,43 +52,46 @@ impl fmt::Display for SolveStats {
 /// A generic implementation of A*, which takes an initial state and heuristic.
 ///
 pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Option<(Vec<S::Edge>, SolveStats)> {
-    // "Reverse Edges". A hashmap from state to previous state + edge
-    let mut redges = HashMap::new();
+    // TODO: estimate capacity for hashset and binary heap
+    let mut visited = HashSet::new();
 
     // a priority queue, implemented using the standard library's binary heap.
     let mut work_queue = BinaryHeap::<Node<S>>::new();
     work_queue.push(Node{
         score: 0,
         cost: 0,
-        state: initial_state.clone(),
-        prev: None,
+        path: vec![]
     });
     let mut work_count = 0;
+    // let mut longest = 0;
     while let Some(work) = work_queue.pop() {
         // Break the fields of the "work" node out into variables old_state, old_cost, and old_path.
         // These are from the node we're coming from
         match work {
-            Node { state: old_state, cost: old_cost, score: _, prev } => {
+            Node { cost: old_cost, score: _, path } => {
+/*
+                if longest < path.len() {
+                    longest = path.len();
+                    println!("Path Len: {}. Work: {}", longest, work_count);
+                }
+*/
+                // TODO: Rename old_state
+                let old_state = {
+                    let mut state = initial_state.clone();
+                    for edge in &path {
+                        state = state.try_edge(edge).unwrap();
+                    }
+                    state
+                };
                 // If we're the first to reach "old_state" (which is the current work item)
                 // then the old_state's previous edge is the fastest route there
-                // so we save the old_state's previous edge and previous game state
-                if let Some(prev) = prev {
-                    match redges.entry(old_state.clone()) {
-                        // Don't think about nodes that already have a "previous" state
-                        hash_map::Entry::Occupied(_) => continue,
-                        hash_map::Entry::Vacant(e) => e.insert(prev)
-                    };
+                if visited.get(&old_state).is_none() {
+                    visited.insert(old_state.clone());
+                }else{
+                    // already visited node, skip any further work
+                    continue;
                 }
                 if old_state.is_solved() {
-                    let mut path = vec![];
-                    let mut state = old_state;
-                    while state != initial_state {
-                        let (prev_state, prev_edge) = redges.remove(&state).unwrap();
-                        path.push(prev_edge);
-                        state = prev_state;
-                    }
-                    // Reverse the path from destination to initial_state to be forwards
-                    path.reverse();
                     let stats = SolveStats{
                         path_len: path.len(),
                         work_count,
@@ -98,11 +101,13 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
                 }
                 for (state, cost, edge) in old_state.clone().iter_successors() {
                     let cost = cost + old_cost;
+                    let mut new_path = Vec::with_capacity(path.len());
+                    new_path.extend(path.iter().cloned());
+                    new_path.push(edge.clone());
                     let node = Node{
                         score: heuristic(&state) + cost,
                         cost,
-                        state,
-                        prev: Some((old_state.clone(), edge))
+                        path: new_path
                     };
                     work_queue.push(node);
                 }

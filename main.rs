@@ -27,27 +27,32 @@ fn main() {
     print!("{}", &game);
 
     // let heuristic = h10s::ignoramus;
-    let heuristic = h10s::consecutive_enjoyer;
+    // let heuristic = h10s::consecutive_enjoyer;
     // let heuristic = h10s::count_clutter;
+    // let heuristic = h10s::diggly;
+    let heuristic = h10s::dig_clutter;
     // let heuristic = h10s::relaxed_bucket_solve;
 
-/*
-    // Compress game to make heuristics more efficient
+
+    // Compress game to allow more efficient heuristics implementation
     let mut compressed_game = game.clone();
     compress_game(&mut compressed_game);
+    let (path, stats) = astar::solve(Rc::new(compressed_game), |s| h10s::compressed_dig_clutter(s.borrow())).expect("Couldn't solve ball game");
 
-    let path = astar::solve(compressed_game, heuristic).expect("Couldn't solve ball game");
-*/
+
+    // let path = astar::solve(compressed_game, heuristic).expect("Couldn't solve ball game");
     // let (path, stats) = astar::solve(game.clone(), heuristic).expect("Couldn't solve ball game");
-    let (path, stats) = astar::solve(Rc::new(game.clone()), |s| heuristic(s.borrow())).expect("Couldn't solve ball game");
+    // let (path, stats) = astar::solve(Rc::new(game.clone()), |s| heuristic(s.borrow())).expect("Couldn't solve ball game");
     println!("{}", stats);
-    // println!("{:?}", path);
+    // println!("{:#?}", path);
+    println!();
 
     let mut state = game;
     for action in path {
         state = state.try_action(action).expect("Couldn't replay action from path");
-        //println!("{}", state.is_solved());
-        //println!("## {:?}:\n{}", action, state);
+        // println!("{}", state.is_solved());
+        // println!("{}", heuristic(&state));
+        // println!("## {:?}:\n{}", action, state);
     }
 }
 

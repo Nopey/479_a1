@@ -195,6 +195,9 @@ impl State for Game {
             }
         }
     }
+    fn try_edge(&self, edge: &Action) -> Option<Self> {
+        self.try_action(*edge)
+    }
     /// If a game `is_solved` and `is_valid`, then it is solved. Some invalid board states are considered solved by this function,
     /// but checking for validity is a tad costly.
     ///
@@ -216,6 +219,9 @@ impl State for Rc<Game> {
                 to: 0
             }
         }
+    }
+    fn try_edge(&self, edge: &Action) -> Option<Self> {
+        self.try_action(*edge).map(Rc::new)
     }
     /// If a game `is_solved` and `is_valid`, then it is solved. Some invalid board states are considered solved by this function,
     /// but checking for validity is a tad costly.
