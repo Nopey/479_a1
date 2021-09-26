@@ -1,5 +1,5 @@
 //! Solve ball game with A* search
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, hash_map};
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::Hash;
@@ -73,7 +73,11 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
                 // then the old_state's previous edge is the fastest route there
                 // so we save the old_state's previous edge and previous game state
                 if let Some(prev) = prev {
-                    redges.entry(old_state.clone()).or_insert(prev);
+                    match redges.entry(old_state.clone()) {
+                        // Don't think about nodes that already have a "previous" state
+                        hash_map::Entry::Occupied(_) => continue,
+                        hash_map::Entry::Vacant(e) => e.insert(prev)
+                    };
                 }
                 if old_state.is_solved() {
                     let mut path = vec![];
