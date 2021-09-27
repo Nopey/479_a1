@@ -1,8 +1,14 @@
 //! Heuristics for the ball game
+//!
+//! [Official Soundtrack for this module](https://archive.org/download/OTMN027/01_storz_-_First_Tactics.ogg)
 #![allow(unused)] // not every heuristic is used, and that's O-K
 use crate::game::*;
 use crate::astar::*;
 use std::collections::HashSet;
+
+// NOTES ABOUT THE STATS:
+// 1, 2, 3, and 4 refer to the input files
+// the stats may be out of date.
 
 /// Knows nothing, gives a 0 cost to all states
 ///
@@ -117,7 +123,7 @@ pub fn dig_clutter(game: &Game) -> Score {
         }).sum()
 }
 
-/// Compressed version of dig_clutter
+/// Same heuristic as dig_clutter, but is implemented without a hashset for greater performance
 ///
 /// # Panics
 ///
@@ -142,7 +148,6 @@ pub fn compressed_dig_clutter(game: &Game) -> Score {
         }).sum()
 }
 
-
 /// Solves a relaxed version of the game in which there are more buckets, using the diggly heuristic
 ///
 /// Admissable: A* with an admissable cost heuristic will give a path no longer than the real solution.
@@ -150,7 +155,6 @@ pub fn compressed_dig_clutter(game: &Game) -> Score {
 // 2: Solved for 10 long path in 224 work steps. work queue len: 2697
 // 3: Solved for 15 long path in 282 work steps. work queue len: 6857
 // 4: too slow
-// (Appears to be roughly equivalent to diggly)
 pub fn relaxed_bucket_solve(game: &Game) -> Score {
     let mut relaxed_game = game.clone();
     relaxed_game.tubes.push(Tube::empty());

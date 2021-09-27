@@ -323,6 +323,8 @@ impl fmt::Debug for Game {
 }
 impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+/*
+        // Noisier version, prints out game info above board
         writeln!(f,
             "Game with {} tubes, in {} state",
             self.tubes.len(),
@@ -331,6 +333,7 @@ impl fmt::Display for Game {
             else if !self.is_solved() { "a valid" }
             else { "a solved" }
         )?; // ? is the error short-circuiting operator. It will return from this function if write fails
+*/
         for (idx, tube) in self.tubes.iter().enumerate() {
             writeln!(f, "[{:>2}] {}", idx, tube)?
         }
@@ -354,7 +357,12 @@ impl fmt::Display for Tube {
 
 impl fmt::Display for Ball {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", std::char::from_u32(self.color.get().into()).unwrap())
+        let c = self.color.get();
+        if c < 0x10 {
+            write!(f, "{:x}", c)
+        } else {
+            write!(f, "{}", std::char::from_u32(c.into()).unwrap())
+        }
     }
 }
 

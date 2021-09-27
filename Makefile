@@ -23,8 +23,8 @@ balls_dbg:
 doc:
 	rustdoc $(COMMON_FLAGS) --crate-name balls --document-private-items
 
-# build release and debug binary
-all: balls balls_dbg
+# build everything
+all: balls balls_dbg doc
 
 # professor-proofing the makefile by adding aliases
 .PHONY: docs build build_dbg

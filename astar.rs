@@ -3,15 +3,15 @@
 //! Contains no domain-specific knowledge about the ball-game.
 use std::collections::{BinaryHeap, HashSet};
 use std::cmp::Ordering;
-use std::fmt;
+use std::{fmt,fmt::Debug};
 use std::hash::Hash;
 
 /// An interface to expose a game's successor function to the search alg.
 ///
 /// Implemented by struct Game in game.rs
-pub trait State: Sized + Hash + Eq + Clone {
+pub trait State: Sized + Hash + Eq + Clone + Debug {
     /// The search algorithm will return the path as a vector of Edges.
-    type Edge: Clone + Clone;
+    type Edge: Clone + Clone + Debug;
     /// An iterator over the neighboring states, their cost, and the 'Edge' to return if this is used as the solution Path.
     type Iter: Iterator<Item = (Self, Score, Self::Edge)>;
     /// Return an iterator over the neighboring states 
@@ -26,7 +26,7 @@ pub trait State: Sized + Hash + Eq + Clone {
 //TODO: Rename Score to `Cost`
 pub type Score = i32;
 
-/// A path to be considered, sorted by associated costs.
+/// A path to be considered, ordered by astar_costs.
 struct Node<S: State> {
     /// cost + heuristic's predicted future cost
     astar_cost: Score,
@@ -36,7 +36,7 @@ struct Node<S: State> {
     path: Vec<S::Edge>,
 }
 
-/// Statistics about how difficult the problem was to solve
+/// Statistics about how difficult a solution was to find
 pub struct SolveStats {
     path_len: usize,
     visited_len: usize,
@@ -48,7 +48,7 @@ impl fmt::Display for SolveStats {
     }
 }
 
-/// A generic implementation of A*, which takes an initial state and heuristic.
+/// A generic implementation of A*, which takes an initial state and a heuristic.
 ///
 /// Returns `None` if no solution is found, or `Some((Path, Stats))` otherwise
 pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Option<(Vec<S::Edge>, SolveStats)> {
@@ -63,8 +63,13 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
         path: vec![]
     });
 
+    let mut last_cost = 0;
     // Loop over the work queue. Nodes with the least cost will be considered first.
     while let Some(work) = work_queue.pop() {
+        // a useful assert I discovered all too late in development
+        debug_assert!(last_cost <= work.astar_cost, "INADMISSABLE {} -> {}\n{:?}", last_cost, work.astar_cost, work.path);
+        last_cost = work.astar_cost;
+
         // Break the fields of the "work" node out into variables cost and path while ignoring field 'astar_cost'
         // These are from the node we're coming from
         let Node { cost, astar_cost: _, path } = work;
