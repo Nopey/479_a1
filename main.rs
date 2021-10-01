@@ -7,7 +7,7 @@ mod astar;
 mod h10s;
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 
 use astar::State;
 
@@ -16,13 +16,29 @@ fn main() {
     // Parse commandline arg
     let filename = std::env::args().skip(1).next().unwrap_or_else(||{
         // or print help
-        eprintln!("balls: Expected one argument: input filename");
+        eprintln!("balls: Expected one argument: input filename (or '-' for stdin)");
         std::process::exit(1)
     });
 
     // Read file, parse board, and display initial state
-    let mut ifile = File::open(filename).expect("Couldn't open input file for reading");
-    let game = game::Game::from_input(&mut BufReader::new(&mut ifile));
+    let mut file_maybe = None;
+    let mut stdin_maybe = None;
+    let mut stdin_lock_maybe = None;
+    let mut input: &mut dyn BufRead  = if filename == "-" {
+        // NOTE: Because the cubs and pups only have Rust 1.41,
+        // I can't use Option::insert, but get_or_insert can be used.
+        stdin_lock_maybe.get_or_insert(
+            stdin_maybe.get_or_insert(std::io::stdin()).lock()
+        )
+    } else {
+        file_maybe.get_or_insert(
+            BufReader::new(
+                File::open(filename)
+                    .expect("Couldn't open input file for reading")
+            )
+        )
+    };
+    let game = game::Game::from_input(&mut input);
     println!("Initial Board State:\n{}", &game);
 
 

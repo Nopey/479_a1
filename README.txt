@@ -20,6 +20,9 @@ No moving of source code is needed, the directory structure is flat
 
 To run, simply enter `./balls A1-input1.txt`, replacing the argument with the desired input file.
 
+If you'd like to enter the input problem through stdin use `-` as the filename,
+then enter the problem, followed by an EOF (CTRL-D).
+
 
 ## Levels
 The game ships with five levels, from 0 to 4 inclusive.
