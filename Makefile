@@ -23,14 +23,35 @@ balls_dbg:
 doc:
 	rustdoc $(COMMON_FLAGS) --crate-name balls --document-private-items
 
+# Benchmark
+# (Prefer hyperfine if it is present, but fall back to time)
+.PHONY: bench
+ifeq (, $(shell which hyperfine))
+bench: balls
+	time ./balls A1-input1.txt
+	time ./balls A1-input2.txt
+	time ./balls A1-input3.txt
+	time ./balls A1-input4.txt
+else
+bench: balls
+	@# Hyperfine needs the command to be in quotes
+	hyperfine './balls A1-input1.txt'
+	hyperfine './balls A1-input2.txt'
+	hyperfine './balls A1-input3.txt'
+	hyperfine './balls A1-input4.txt'
+endif
+
 # build everything
 all: balls balls_dbg doc
 
 # professor-proofing the makefile by adding aliases
-.PHONY: docs build build_dbg
+.PHONY: docs build ball build_dbg debug benchmark
 docs: doc
 build: balls
+ball: balls
 build_dbg: balls_dbg
+debug: balls_dbg
+benchmark: bench
 
 
 # Clean build dir
