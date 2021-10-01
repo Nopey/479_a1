@@ -13,7 +13,7 @@ pub trait State: Sized + Hash + Eq + Clone + Debug {
     /// The search algorithm will return the path as a vector of Edges.
     type Edge: Clone + Clone + Debug;
     /// An iterator over the neighboring states, their cost, and the 'Edge' to return if this is used as the solution Path.
-    type Iter: Iterator<Item = (Self, Score, Self::Edge)>;
+    type Iter: Iterator<Item = (Self, Cost, Self::Edge)>;
     /// Return an iterator over the neighboring states 
     fn iter_successors(self) -> Self::Iter;
     /// Take an edge, if that edge exists.
@@ -22,16 +22,15 @@ pub trait State: Sized + Hash + Eq + Clone + Debug {
     fn is_solved(&self) -> bool;
 }
 
-/// A typedef for the integer I'm using to keep track of score and cost
-//TODO: Rename Score to `Cost`
-pub type Score = i32;
+/// A typedef for the integer I'm using to keep track of cost
+pub type Cost = i32;
 
 /// A path to be considered, ordered by astar_costs.
 struct Node<S: State> {
     /// cost + heuristic's predicted future cost
-    astar_cost: Score,
+    astar_cost: Cost,
     /// Path cost to this path finding node
-    cost: Score,
+    cost: Cost,
     /// edges leading to this state from the initial_state
     path: Vec<S::Edge>,
 }
@@ -51,7 +50,7 @@ impl fmt::Display for SolveStats {
 /// A generic implementation of A*, which takes an initial state and a heuristic.
 ///
 /// Returns `None` if no solution is found, or `Some((Path, Stats))` otherwise
-pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Option<(Vec<S::Edge>, SolveStats)> {
+pub fn solve<S: State, H: Fn(&S) -> Cost>(initial_state: S, heuristic: H) -> Option<(Vec<S::Edge>, SolveStats)> {
     // the set of all states we've visited
     let mut visited = HashSet::new();
     // a priority queue, implemented using the standard library's binary heap.
@@ -117,7 +116,7 @@ pub fn solve<S: State, H: Fn(&S) -> Score>(initial_state: S, heuristic: H) -> Op
     None
 }
 
-// manual trait implementations, to make it so Node's orderings only depend on the score field.
+// manual trait implementations, to make it so Node's orderings only depend on the astar_cost field.
 impl<S: State> Ord for Node<S> {
     fn cmp(&self, other: &Self) -> Ordering {
         // NOTE: In std's BinaryHeap the largest Node will be popped first, so this

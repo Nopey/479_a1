@@ -15,7 +15,7 @@ use std::collections::HashSet;
 /// Devolves A* pathfinding into breadth first search
 // 1: Solved for 10 long path in 352546 work steps. work queue len: 1232156
 // 2: Too Slow!
-pub fn ignoramus(_: &Game) -> Score {
+pub fn ignoramus(_: &Game) -> Cost {
     0
 }
 
@@ -26,11 +26,11 @@ pub fn ignoramus(_: &Game) -> Score {
 // 2: Solved for 10 long path in 3722 work steps. work queue len: 49073
 // 3: Solved for 15 long path in 76961 work steps. work queue len: 1980371
 // 4: Too Slow!
-pub fn consecutive_enjoyer(game: &Game) -> Score {
+pub fn consecutive_enjoyer(game: &Game) -> Cost {
     game.tubes.iter().map(|tube| {
             tube.balls.iter().zip(tube.balls.iter().skip(1))
             .map(|(ball1, ball2)| if ball2.is_none() || ball1==ball2 {0} else {1})
-            .sum::<Score>()
+            .sum::<Cost>()
         }).sum()
 }
 
@@ -41,7 +41,7 @@ pub fn consecutive_enjoyer(game: &Game) -> Score {
 // 1: Solved for 10 long path in 296 work steps. work queue len: 1090
 // 2: Solved for 10 long path in 53082 work steps. work queue len: 855667
 // 3: Too Slow!
-pub fn count_clutter(game: &Game) -> Score {
+pub fn count_clutter(game: &Game) -> Cost {
     let mut cost = 0;
     for tube in &game.tubes {
         let mut balls = tube.balls.iter();
@@ -64,12 +64,12 @@ pub fn count_clutter(game: &Game) -> Score {
 // 2: Solved for 10 long path in 224 work steps. work queue len: 2697
 // 3: Solved for 15 long path in 282 work steps. work queue len: 6857
 // 4: 
-pub fn diggly(game: &Game) -> Score {
+pub fn diggly(game: &Game) -> Cost {
     let mut seen = HashSet::new();
     game.tubes.iter().map(|tube| {
             tube.balls.iter().zip(tube.balls.iter().skip(1))
             .map(|(ball1, ball2)| if ball2.is_none() || ball1==ball2 {0} else {1})
-            .sum::<Score>()
+            .sum::<Cost>()
             + tube.balls[0].map(|ball|
                 if seen.get(&ball).is_some(){ 1 } else { seen.insert(ball); 0 }
             ).unwrap_or(0)
@@ -81,13 +81,13 @@ pub fn diggly(game: &Game) -> Score {
 /// # Panics
 ///
 /// Panics if balls' colors are not compressed. (See: main.rs compress_game)
-pub fn compressed_diggly(game: &Game) -> Score {
+pub fn compressed_diggly(game: &Game) -> Cost {
     // if there are N tubes, there are at most N-1 colors
     let mut seen = vec![false; game.tubes.len()];
     game.tubes.iter().map(|tube| {
             tube.balls.iter().zip(tube.balls.iter().skip(1))
             .map(|(ball1, ball2)| if ball2.is_none() || ball1==ball2 {0} else {1})
-            .sum::<Score>()
+            .sum::<Cost>()
             + tube.balls[0].map(|ball|
                 if seen[ball.color.get() as usize]{ 1 } else { seen[ball.color.get() as usize] = true; 0 }
             ).unwrap_or(0)
@@ -104,7 +104,7 @@ pub fn compressed_diggly(game: &Game) -> Score {
 // 2: Solved for 10 long path in 76 work steps. work queue len: 962
 // 3: Solved for 15 long path in 135 work steps. work queue len: 3227
 // 4: Solved for 25 long path in 57035 work steps. work queue len: 2093664
-pub fn dig_clutter(game: &Game) -> Score {
+pub fn dig_clutter(game: &Game) -> Cost {
     let mut seen = HashSet::new();
     game.tubes.iter().map(|tube| {
             // penalize balls not having a continous streak of one color connecting to the bottom
@@ -128,7 +128,7 @@ pub fn dig_clutter(game: &Game) -> Score {
 /// # Panics
 ///
 /// Panics if balls' colors are not compressed. (See: main.rs compress_game)
-pub fn compressed_dig_clutter(game: &Game) -> Score {
+pub fn compressed_dig_clutter(game: &Game) -> Cost {
     // NOTE: this `seen` vector's 0 position goes unused. could be avoided, but reduces readability of below code.
     let mut seen = vec![false; game.tubes.len()];
     game.tubes.iter().map(|tube| {
@@ -155,12 +155,12 @@ pub fn compressed_dig_clutter(game: &Game) -> Score {
 // 2: Solved for 10 long path in 224 work steps. work queue len: 2697
 // 3: Solved for 15 long path in 282 work steps. work queue len: 6857
 // 4: too slow
-pub fn relaxed_bucket_solve(game: &Game) -> Score {
+pub fn relaxed_bucket_solve(game: &Game) -> Cost {
     let mut relaxed_game = game.clone();
     relaxed_game.tubes.push(Tube::empty());
     relaxed_game.tubes.push(Tube::empty());
     relaxed_game.tubes.push(Tube::empty());
     let path = solve(relaxed_game, diggly);
-    path.map(|x| x.0.len() as Score).unwrap_or(0)
+    path.map(|x| x.0.len() as Cost).unwrap_or(0)
 }
 

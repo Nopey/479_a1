@@ -6,7 +6,7 @@ use std::io::BufRead;
 use std::fmt;
 use std::collections::HashMap;
 use std::hash::Hash;
-use crate::astar::{Score,State};
+use crate::astar::{Cost,State};
 
 /// A game state, consisting of a number of Tubes.
 #[derive(Clone, Hash, Eq, PartialEq)] // Automatically generate code implementing `Clone`, a common trait (interface) for a type to implement.
@@ -262,7 +262,7 @@ pub struct GameSuccessors {
 }
 
 impl Iterator for GameSuccessors {
-    type Item = (Game, Score, Action);
+    type Item = (Game, Cost, Action);
     fn next(&mut self) -> Option<Self::Item> {
         let len = self.state.tubes.len() as u8;
 
