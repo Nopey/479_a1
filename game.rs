@@ -72,6 +72,7 @@ impl Game {
 
         let mut full_count_parsed = false;
         let mut empty_count_parsed = false;
+        let mut empty_tubes = 0;
         loop{ // an infinite loop. has a break statement below, in EOF.
             let mut line = String::new();
             // read from input into `line`, up to newline (LF) or EOF
@@ -104,10 +105,7 @@ impl Game {
             } else if !empty_count_parsed {
                 // Line 2: # of empty tubes
                 empty_count_parsed = true;
-                let empty_tubes = line.parse().expect("Couldn't parse empty tube count");
-                for _ in 0..empty_tubes {
-                    tubes.push(Tube::empty());
-                }
+                empty_tubes = line.parse().expect("Couldn't parse empty tube count");
             } else if tubes_remaining > 0 {
                 tubes_remaining -= 1;
                 // Remaining lines: Colors of balls
@@ -132,6 +130,11 @@ impl Game {
                 panic!("Unexpected line at end of input: {:?}", line);
             }
         }
+
+                for _ in 0..empty_tubes {
+                    tubes.push(Tube::empty());
+                }
+
         let game = Game { // Construct a new Game object,
             tubes // with tubes variable as tubes member
         };
@@ -155,6 +158,9 @@ impl Game {
         let to_idx = self.tubes[to].last();
         let from_idx = self.tubes[from].last()-1;
 
+        // colors must match
+        if to_idx > 0 && self.tubes[to].balls[to_idx-1] != self.tubes[from].balls[from_idx] { return None; }
+
         // expensive: clone state. (hence why we do all error handling before this)
         let mut new_state = self.clone();
         // move ball
@@ -172,7 +178,7 @@ impl Game {
         use ValidationError::*;
         // A1 specifies valid games state with 2-10 full tubes and 1-3 empty, for a total of 3-13 tubes.
         if self.tubes.len() < 3  { return Err(NotEnoughTubes); }
-        if self.tubes.len() > 13 { return Err(TooManyTubes); }
+        if self.tubes.len() > 14 { return Err(TooManyTubes); }
 
         // ensure there are no floating balls
         // (balls preceded by an empty space)
@@ -188,7 +194,10 @@ impl Game {
         for (ball, &count) in &count {
             if let Some(_ball) = ball {
                 // The count of some ball
-                if count < 4 { return Err(NotEnoughBallsOfColor); }
+                    if count < 4 {
+println!("Not Enough '{}'", _ball);
+        return Err(NotEnoughBallsOfColor);
+}
                 if count > 4 { return Err(TooManyBallsOfColor); }
             } else {
                 // the "air" space count

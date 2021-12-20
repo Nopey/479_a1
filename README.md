@@ -1,8 +1,7 @@
 # ball game and agent
-  Assignment 1
-  VIU CSCI 479
- Magnus L Larsen
-  655 784 536
+A computer plays a simple game, sorting balls in tubes.
+
+The agent is implemented using A star search.
 
 
 ## Compilation
@@ -214,6 +213,5 @@ Previously, the agent would use up all of the resources and crash with one of th
 see the Output section; this may occur on inputs I haven't tested,
 but I have greatly reduced memory usage and improved my heuristics since I last experienced these errors.
 
-## Comments
-I have written this assignment in Rust.
-Feel free to reach out if you have any questions regarding my assignment or the Rust language itself.
+A previous version of this program incorrectly considered moving balls into a tube with a different color ball
+on-top to be a valid move.

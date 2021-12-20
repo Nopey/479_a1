@@ -1,0 +1,20 @@
+// example from liu's phone game
+12
+2
+
+// first row
+1234
+5466
+3742
+5594
+33ab
+99bb
+2ac7
+
+// second row
+62cd
+c7ad
+ca11
+57d6
+9b1d
+

@@ -46,7 +46,8 @@ fn main() {
     let mut compressed_game = game.clone();
     compressed_game.compress();
     // run search
-     let (path, stats) = astar::solve(compressed_game, h10s::compressed_dig_clutter).expect("Couldn't solve ball game");
+    // let (path, stats) = astar::solve(compressed_game, h10s::teenagent).expect("Couldn't solve ball game");
+    let (path, stats) = astar::solve(compressed_game, h10s::compressed_dig_clutter).expect("Couldn't solve ball game");
     // let (path, stats) = astar::solve(compressed_game, h10s::compressed_diggly).expect("Couldn't solve ball game");
 
 

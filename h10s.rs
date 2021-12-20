@@ -148,6 +148,15 @@ pub fn compressed_dig_clutter(game: &Game) -> Cost {
         }).sum()
 }
 
+/// Bad heuristic, inadmissable, maybe solve phone game?
+///
+/// # Panics
+///
+/// Panics if balls' colors are not compressed. (See: main.rs compress_game)
+pub fn teenagent(game: &Game) -> Cost {
+    compressed_dig_clutter(game) + consecutive_enjoyer(game) / 2
+}
+
 /// Solves a relaxed version of the game in which there are more buckets, using the diggly heuristic
 ///
 /// Admissable: A* with an admissable cost heuristic will give a path no longer than the real solution.
